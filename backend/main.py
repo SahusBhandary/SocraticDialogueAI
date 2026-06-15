@@ -38,6 +38,10 @@ class ChatInput(BaseModel):
     message: str
     session_id: str
 
+@app.get("/")
+async def root():
+    return {"status": "ok"}
+
 @app.get("/history/{session_id}")
 async def get_history(session_id: str):
     messages = [m for m in histories[session_id] if m["role"] != "system"]
