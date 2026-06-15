@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
 
+const apiUrl = import.meta.env.VITE_API_URL;
+
 const INITIAL_MESSAGE = {
   role: 'assistant',
   content: 'Hi! I am your Socratic tutor. What questions do you have?'
@@ -26,7 +28,7 @@ function App() {
     }
     setSessionId(id)
 
-    fetch(`http://localhost:8000/history/${id}`)
+    fetch(`${apiUrl}/history/${id}`)
       .then(res => res.json())
       .then(data => {
         if (data.messages && data.messages.length > 0) {
@@ -59,7 +61,7 @@ function App() {
     setLoading(true)
 
     try {
-      const res = await fetch('http://localhost:8000/chat', {
+      const res = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText, session_id: sessionId }),
