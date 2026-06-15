@@ -1,121 +1,120 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useState, useRef, useEffect } from 'react'
 import './App.css'
 
+const INITIAL_MESSAGE = {
+  role: 'assistant',
+  content: 'Hi! I am your Socratic tutor. What questions do you have?'
+}
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [messages, setMessages] = useState([INITIAL_MESSAGE])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef(null)
+  const textareaRef = useRef(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  const autoResize = () => {
+    const ta = textareaRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'
+  }
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return
+
+    const userText = input.trim()
+    setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    setMessages(prev => [...prev, { role: 'user', content: userText }])
+    setLoading(true)
+
+    try {
+      const res = await fetch(`http://localhost:8000/ai?user_input=${encodeURIComponent(userText)}`)
+      const data = await res.json()
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Please check if the server is running before continuing!'
+      }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <div className="bg-orbs">
+        <div className="orb orb-moon" />
+        <div className="orb orb-ember" />
+        <div className="orb orb-pink" />
+        <div className="orb orb-violet" />
+        <div className="orb orb-green" />
+      </div>
 
-      <div className="ticks"></div>
+      <div className="chat-container">
+        <header className="chat-header">
+          <div className="moon-orb" />
+          <h1 className="title">Socratic Tutor</h1>
+        </header>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <div className="messages-panel">
+          {messages.map((msg, i) => (
+            <div key={i} className={`message ${msg.role}`}>
+              <div className="avatar">{msg.role === 'assistant' ? '🌙' : '✦'}</div>
+              <div className="bubble">
+                <p>{msg.content}</p>
+              </div>
+            </div>
+          ))}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          {loading && (
+            <div className="message assistant">
+              <div className="avatar">🌙</div>
+              <div className="bubble loading-bubble">
+                <span /><span /><span />
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-area">
+          <textarea
+            ref={textareaRef}
+            className="input-field"
+            value={input}
+            onChange={e => { setInput(e.target.value); autoResize() }}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter any question..."
+            rows={1}
+          />
+          <button
+            className="send-btn"
+            onClick={sendMessage}
+            disabled={loading || !input.trim()}
+            aria-label="Send"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
