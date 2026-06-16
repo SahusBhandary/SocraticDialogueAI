@@ -27,12 +27,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-messages = [
-    {"role": "system", "content": "You are a Socratic tutor. Never give answers directly. Instead, ask probing questions that guide the user to discover the answer themselves."}
-]
+SYSTEM_PROMPT = {"role": "system", "content": "You are a Socratic tutor. Never give answers directly. Instead, ask probing questions that guide the user to discover the answer themselves."}
 
 class ChatInput(BaseModel):
     message: str
+    history: list[dict] = []
 
 @app.get("/")
 async def root():
@@ -41,17 +40,22 @@ async def root():
 @app.post("/chat")
 async def chat(input: ChatInput):
     try:
-        messages.append({"role": "user", "content": pre_process_text(input.message)})
+        context = [SYSTEM_PROMPT]
+        for m in input.history:
+            role = m.get("role")
+            content = m.get("content", "")
+            if role == "user":
+                context.append({"role": "user", "content": pre_process_text(content)})
+            elif role == "assistant":
+                context.append({"role": "assistant", "content": content})
+        context.append({"role": "user", "content": pre_process_text(input.message)})
 
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=messages,
+            messages=context,
         )
 
-        ai_response = response.choices[0].message.content
-        messages.append({"role": "assistant", "content": ai_response})
-
-        return {"message": ai_response}
+        return {"message": response.choices[0].message.content}
     except OpenAIError as e:
         print(f"OpenAI API Error: {e}")
         return {"error": str(e)}

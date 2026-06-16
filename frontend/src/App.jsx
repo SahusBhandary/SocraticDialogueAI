@@ -30,6 +30,7 @@ function App() {
     if (!input.trim() || loading) return
 
     const userText = input.trim()
+    const history = messages
     setInput('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     setMessages(prev => [...prev, { role: 'user', content: userText }])
@@ -39,10 +40,14 @@ function App() {
       const res = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText }),
+        body: JSON.stringify({ message: userText, history }),
       })
       const data = await res.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+      if (data.error) {
+        setMessages(prev => [...prev, { role: 'assistant', content: 'There was an API error. Please try again.' }])
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+      }
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
