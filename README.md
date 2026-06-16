@@ -24,14 +24,14 @@ Each message triggers a **multi-agent debate** across three models before a resp
 
 1. User sends a message from the frontend along with the full conversation history.
 2. spaCy lemmatizes and lowercases user input before it reaches any LLM.
-3. GPT-4o, Claude, and Gemini are called **in parallel** — each independently proposes a Socratic question.
+3. GPT-4o, Claude, and Gemini are called **in parallel**. Each independently proposes a Socratic question.
 4. GPT-4o **synthesizes** the best elements of all three proposals into one final response.
 5. The synthesized question is returned to the frontend.
 6. Each assistant message shows a **"Multi-agent debate"** toggle that reveals what each model proposed.
 
 If any individual model fails (rate limit, bad key, etc.), the debate continues with the remaining models. If all three fail, it falls back to a direct GPT-4o call.
 
-The backend is fully stateless — no server-side session storage.
+The backend is fully stateless, no server-side session storage.
 
 ---
 
