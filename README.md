@@ -1,6 +1,6 @@
 # SocraticDialogueAI
 
-An AI-powered Socratic tutor that never gives answers directly. Instead it asks probing questions to guide you toward discovering answers yourself.
+An AI-powered Socratic tutor that never gives answers directly. Instead it asks probing questions to guide you toward discovering answers yourself. Powered by a multi-model debate between GPT-4o, Claude, and Gemini.
 
 **Live app:** https://socratic-dialogue-ai.vercel.app
 
@@ -10,7 +10,8 @@ An AI-powered Socratic tutor that never gives answers directly. Instead it asks 
 
 | Layer | Technology |
 |---|---|
-| Backend | Python, FastAPI, OpenAI GPT-4o |
+| Backend | Python, FastAPI |
+| LLM APIs | OpenAI GPT-4o, Anthropic Claude (claude-sonnet-4-6), Google Gemini (gemini-2.5-flash-lite) |
 | NLP Preprocessing | spaCy (`en_core_web_md`) |
 | Frontend | React, Vite |
 | Deployment | Render (backend), Vercel (frontend) |
@@ -19,13 +20,18 @@ An AI-powered Socratic tutor that never gives answers directly. Instead it asks 
 
 ## How It Works
 
-1. User sends a message from the frontend.
-2. The full conversation history is sent to the FastAPI backend with each request.
-3. spaCy lemmatizes and lowercases user input before it reaches the LLM.
-4. GPT-4o responds using a Socratic system prompt. It never answers directly.
-5. The response is returned and displayed in the chat UI.
+Each message triggers a **multi-agent debate** across three models before a response is shown:
 
-The backend is fully stateless, no server-side session storage.
+1. User sends a message from the frontend along with the full conversation history.
+2. spaCy lemmatizes and lowercases user input before it reaches any LLM.
+3. GPT-4o, Claude, and Gemini are called **in parallel** — each independently proposes a Socratic question.
+4. GPT-4o **synthesizes** the best elements of all three proposals into one final response.
+5. The synthesized question is returned to the frontend.
+6. Each assistant message shows a **"Multi-agent debate"** toggle that reveals what each model proposed.
+
+If any individual model fails (rate limit, bad key, etc.), the debate continues with the remaining models. If all three fail, it falls back to a direct GPT-4o call.
+
+The backend is fully stateless — no server-side session storage.
 
 ---
 
@@ -35,7 +41,7 @@ The backend is fully stateless, no server-side session storage.
 
 - Python 3.10+
 - Node.js 18+
-- An OpenAI API key
+- API keys for OpenAI, Anthropic, and Google AI
 
 ### 1. Clone the repo
 
@@ -57,6 +63,8 @@ Create a `.env` file in the `backend/` directory:
 
 ```
 open_api_key=your_openai_api_key_here
+anthropic_api_key=your_anthropic_api_key_here
+gemini_api_key=your_google_api_key_here
 ```
 
 Start the server:
@@ -94,7 +102,8 @@ Open `http://localhost:5173` in your browser.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/chat` | Send a message and receive a Socratic response |
+| `GET` | `/` | Health check |
+| `POST` | `/chat` | Run the multi-agent debate and return a synthesized Socratic response |
 
 ### `POST /chat`
 
@@ -111,7 +120,12 @@ Open `http://localhost:5173` in your browser.
 **Response:**
 ```json
 {
-  "message": "What do you think causes objects to fall toward the ground?"
+  "message": "What do you think causes objects to fall toward the ground?",
+  "debate": {
+    "gpt": "What evidence would you need to convince yourself that gravity exists?",
+    "claude": "If gravity disappeared, what do you think would happen to the Moon?",
+    "gemini": "What do you notice about how different objects fall when dropped from the same height?"
+  }
 }
 ```
 
@@ -125,7 +139,10 @@ Open `http://localhost:5173` in your browser.
 2. Set the following:
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-3. Add environment variable: `open_api_key` = your OpenAI API key.
+3. Add environment variables:
+   - `open_api_key` — OpenAI API key
+   - `anthropic_api_key` — Anthropic API key (from [console.anthropic.com](https://console.anthropic.com))
+   - `gemini_api_key` — Google API key (from [aistudio.google.com](https://aistudio.google.com))
 
 ### Frontend (Vercel)
 
