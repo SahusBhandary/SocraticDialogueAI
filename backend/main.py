@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError
 import spacy
 from pydantic import BaseModel
-from collections import defaultdict
 
 load_dotenv()
 client = OpenAI(api_key=os.environ.get("open_api_key"))
@@ -27,43 +26,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SYSTEM_PROMPT = {"role": "system", "content": "You are a Socratic tutor. Never give answers directly. Instead, ask probing questions that guide the user to discover the answer themselves."}
-
-def new_session():
-    return [SYSTEM_PROMPT]
-
-histories = defaultdict(new_session)
+messages = [
+    {"role": "system", "content": "You are a Socratic tutor. Never give answers directly. Instead, ask probing questions that guide the user to discover the answer themselves."}
+]
 
 class ChatInput(BaseModel):
     message: str
-    session_id: str
 
 @app.get("/")
 async def root():
     return {"status": "ok"}
 
-@app.get("/history/{session_id}")
-async def get_history(session_id: str):
-    messages = [m for m in histories[session_id] if m["role"] != "system"]
-    return {"messages": messages}
-
 @app.post("/chat")
 async def chat(input: ChatInput):
     try:
-        histories[input.session_id].append({"role": "user", "content": input.message})
-
-        ai_context = [
-            {"role": m["role"], "content": pre_process_text(m["content"]) if m["role"] == "user" else m["content"]}
-            for m in histories[input.session_id]
-        ]
+        messages.append({"role": "user", "content": pre_process_text(input.message)})
 
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=ai_context,
+            messages=messages,
         )
 
         ai_response = response.choices[0].message.content
-        histories[input.session_id].append({"role": "assistant", "content": ai_response})
+        messages.append({"role": "assistant", "content": ai_response})
 
         return {"message": ai_response}
     except OpenAIError as e:

@@ -8,37 +8,12 @@ const INITIAL_MESSAGE = {
   content: 'Hi! I am your Socratic tutor. What questions do you have?'
 }
 
-function generateSessionId() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2)
-}
-
 function App() {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState([INITIAL_MESSAGE])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sessionId, setSessionId] = useState(null)
   const messagesEndRef = useRef(null)
   const textareaRef = useRef(null)
-
-  useEffect(() => {
-    let id = localStorage.getItem('sessionId')
-    if (!id) {
-      id = generateSessionId()
-      localStorage.setItem('sessionId', id)
-    }
-    setSessionId(id)
-
-    fetch(`${apiUrl}/history/${id}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.messages && data.messages.length > 0) {
-          setMessages(data.messages)
-        } else {
-          setMessages([INITIAL_MESSAGE])
-        }
-      })
-      .catch(() => setMessages([INITIAL_MESSAGE]))
-  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -52,7 +27,7 @@ function App() {
   }
 
   const sendMessage = async () => {
-    if (!input.trim() || loading || !sessionId) return
+    if (!input.trim() || loading) return
 
     const userText = input.trim()
     setInput('')
@@ -64,7 +39,7 @@ function App() {
       const res = await fetch(`${apiUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, session_id: sessionId }),
+        body: JSON.stringify({ message: userText }),
       })
       const data = await res.json()
       setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
