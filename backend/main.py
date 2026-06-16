@@ -11,12 +11,14 @@ from pydantic import BaseModel
 
 load_dotenv()
 
+# Load all clients thru api keys
 openai_client = AsyncOpenAI(api_key=os.environ.get("open_api_key"))
 anthropic_client = anthropic.AsyncAnthropic(api_key=os.environ.get("anthropic_api_key"))
 gemini_client = google_genai.Client(api_key=os.environ.get("gemini_api_key"))
 
 app = FastAPI()
 
+# Pre-process text
 nlp = spacy.load("en_core_web_md")
 
 def pre_process_text(text):
@@ -119,11 +121,12 @@ async def get_gemini_perspective(history: list[dict], message: str) -> str | Non
         print(f"Gemini debate error: {e}")
         return None
 
+# Synthesize all prompts
 async def synthesize(gpt: str | None, claude: str | None, gemini: str | None, history: list[dict], message: str) -> str:
     perspectives = {k: v for k, v in {"GPT-4o": gpt, "Claude": claude, "Gemini": gemini}.items() if v}
 
+    # If all other models fail, fall back to gpt
     if not perspectives:
-        # All models failed — fall back to a direct GPT-4o call
         context = build_openai_context(history, message, SYSTEM_PROMPT)
         response = await openai_client.chat.completions.create(model="gpt-4o", messages=context)
         return response.choices[0].message.content

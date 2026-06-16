@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
 
-const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5173').replace(/\/$/, '')
+const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
 
 const INITIAL_MESSAGE = {
   role: 'assistant',
