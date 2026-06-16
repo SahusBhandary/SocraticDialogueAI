@@ -1,11 +1,48 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
 
-const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5173').replace(/\/$/, '')
 
 const INITIAL_MESSAGE = {
   role: 'assistant',
   content: 'Hi! I am your Socratic tutor. What questions do you have?'
+}
+
+const MODEL_META = {
+  gpt:    { label: 'GPT-4o',   color: 'cyan',   icon: '⬡' },
+  claude: { label: 'Claude',   color: 'orange',  icon: '◆' },
+  gemini: { label: 'Gemini',   color: 'violet',  icon: '✦' },
+}
+
+function DebatePanel({ debate }) {
+  const [open, setOpen] = useState(false)
+  const entries = Object.entries(debate).filter(([, v]) => v)
+  if (!entries.length) return null
+
+  return (
+    <div className="debate-panel">
+      <button className="debate-toggle" onClick={() => setOpen(o => !o)}>
+        <span className="debate-toggle-icon">{open ? '▾' : '▸'}</span>
+        Multi-agent debate ({entries.length} models)
+      </button>
+      {open && (
+        <div className="debate-entries">
+          {entries.map(([key, text]) => {
+            const { label, color, icon } = MODEL_META[key]
+            return (
+              <div key={key} className={`debate-entry debate-entry--${color}`}>
+                <span className="debate-model-icon">{icon}</span>
+                <div>
+                  <span className="debate-model-label">{label}</span>
+                  <p className="debate-model-text">{text}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function App() {
@@ -46,7 +83,7 @@ function App() {
       if (data.error) {
         setMessages(prev => [...prev, { role: 'assistant', content: 'There was an API error. Please try again.' }])
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message, debate: data.debate }])
       }
     } catch {
       setMessages(prev => [...prev, {
@@ -85,8 +122,11 @@ function App() {
           {messages.map((msg, i) => (
             <div key={i} className={`message ${msg.role}`}>
               <div className="avatar">{msg.role === 'assistant' ? '🌙' : '✦'}</div>
-              <div className="bubble">
-                <p>{msg.content}</p>
+              <div className="message-body">
+                <div className="bubble">
+                  <p>{msg.content}</p>
+                </div>
+                {msg.debate && <DebatePanel debate={msg.debate} />}
               </div>
             </div>
           ))}
